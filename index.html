@@ -135,10 +135,33 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
 .btn-copy{width:100%;padding:11px;background:transparent;color:var(--gray);border:2px solid #e5e7eb;border-radius:12px;font-size:.84rem;cursor:pointer;margin-top:8px;transition:all .15s}
 .btn-copy:hover{border-color:var(--slate);color:var(--slate)}
 
+/* ── CLASSEMENT ── */
+.rnk-wrap{max-width:600px;margin:36px auto;padding:0 20px}
+.rnk-card{background:#fff;border-radius:var(--r);padding:28px 32px;box-shadow:var(--shadow)}
+.rnk-h1{font-size:1.2rem;font-weight:900;margin-bottom:4px}
+.rnk-sub{font-size:.8rem;color:var(--gray);margin-bottom:20px}
+.rnk-list{display:flex;flex-direction:column;gap:8px}
+.rnk-row{display:grid;grid-template-columns:2.2rem 1fr auto auto;align-items:center;gap:10px;background:var(--light);border-radius:10px;padding:10px 14px;border:2px solid transparent;transition:border-color .2s}
+.rnk-row.me{border-color:var(--pink);background:#fdf2f8}
+.rnk-row.ok{background:#f0fdf4}
+.rnk-row.ok.me{background:#fdf2f8}
+.rnk-medal{font-size:1.3rem;text-align:center}
+.rnk-name{font-size:.84rem;color:var(--slate)}
+.rnk-name small{display:block;font-size:.7rem;color:var(--gray);font-weight:400}
+.rnk-time{font-size:1rem;font-weight:900;color:var(--dark);text-align:right;white-space:nowrap}
+.rnk-ok{font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.rnk-ok.y{background:#dcfce7;color:#16a34a}
+.rnk-ok.n{background:#fee2e2;color:#dc2626}
+.rnk-empty{text-align:center;color:var(--gray);font-size:.9rem;padding:20px 0}
+.btn-rnk{width:100%;padding:12px;background:transparent;color:var(--pink);border:2px solid var(--pink);border-radius:12px;font-size:.9rem;font-weight:700;cursor:pointer;margin-top:10px;transition:all .15s}
+.btn-rnk:hover{background:var(--pink);color:#fff}
+.rnk-loading{text-align:center;color:var(--gray);padding:20px;font-size:.85rem}
+
 @media(max-width:580px){
   .tgl-grid{grid-template-columns:1fr}
   .stats{grid-template-columns:1fr 1fr}
   .timer{font-size:1.4rem;padding:6px 14px}
+  .rnk-row{grid-template-columns:2rem 1fr auto}
 }
 </style>
 </head>
@@ -228,6 +251,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
   </div>
 </section>
 
+<!-- ══════════ CLASSEMENT ══════════ -->
+<section id="s-rnk" class="screen">
+  <div class="rnk-wrap">
+    <div class="rnk-card">
+      <div class="rnk-h1">🏆 Classement</div>
+      <div class="rnk-sub" id="rnk-sub"></div>
+      <div class="rnk-list" id="rnk-list"><div class="rnk-loading">Chargement…</div></div>
+      <button class="btn-back" style="width:100%;margin-top:16px" onclick="showScreen('s-bil')">← Retour au bilan</button>
+    </div>
+  </div>
+</section>
+
 <!-- ══════════ BILAN ══════════ -->
 <section id="s-bil" class="screen">
   <div class="bil-wrap">
@@ -239,6 +274,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
       <div class="stats" id="bil-stats"></div>
       <div class="riss" id="bil-riss"></div>
       <div class="sb-st" id="sb-status"></div>
+      <button class="btn-rnk" id="btn-rnk" onclick="showRanking()" style="display:none">🏆 Voir le classement</button>
       <button class="btn-copy" onclick="copyBilan()">📋 Copier le résumé</button>
       <button class="btn-restart" onclick="goConfig()">↺ Nouvelle activité</button>
     </div>
@@ -732,7 +768,7 @@ async function saveSession() {
   if (!_sb) { el.textContent = ''; return; }
   el.textContent = '⏳ Sauvegarde…';
   try {
-    const { error } = await _sb.from('sessions_atelier_maya').insert([{
+    const { data, error } = await _sb.from('sessions_atelier_maya').insert([{
       session_code: cfg.sessionCode || '',
       duration_sec: st.sec,
       val_count:    st.valCount,
@@ -741,11 +777,55 @@ async function saveSession() {
       mode:         cfg.shared ? 'partagé' : 'solo',
       cards:        st.cards.map(c => ({ expr: c.expr, val: c.val })),
       success:      st.cards.every(c => c.ok === true)
-    }]);
-    el.textContent = error ? '⚠️ Sauvegarde échouée' : '✅ Session sauvegardée';
+    }]).select('id');
+    if (error) { el.textContent = '⚠️ Sauvegarde échouée'; return; }
+    st.sbId = data?.[0]?.id || null;
+    el.textContent = '✅ Session sauvegardée';
+    if (cfg.sessionCode) document.getElementById('btn-rnk').style.display = '';
   } catch (_) {
     el.textContent = '⚠️ Sauvegarde indisponible';
   }
+}
+
+async function showRanking() {
+  showScreen('s-rnk');
+  const code = cfg.sessionCode || '';
+  document.getElementById('rnk-sub').textContent =
+    code ? `Code session : ${code}` : '20 dernières sessions';
+  document.getElementById('rnk-list').innerHTML = '<div class="rnk-loading">Chargement…</div>';
+
+  let q = _sb.from('sessions_atelier_maya').select('id,created_at,session_code,duration_sec,val_count,hints,success,mode');
+  if (code) q = q.eq('session_code', code); else q = q.limit(20);
+  q = q.order('success', { ascending: false })
+       .order('duration_sec', { ascending: true })
+       .order('val_count', { ascending: true });
+
+  const { data, error } = await q;
+  const list = document.getElementById('rnk-list');
+  if (error || !data?.length) {
+    list.innerHTML = '<div class="rnk-empty">Aucune session trouvée.</div>';
+    return;
+  }
+
+  const medals = ['🥇','🥈','🥉'];
+  const ok = data.filter(r => r.success);
+  const ko = data.filter(r => !r.success);
+  const ranked = [...ok, ...ko];
+
+  list.innerHTML = ranked.map((r, i) => {
+    const isMe = r.id === st.sbId;
+    const mm = String(Math.floor(r.duration_sec / 60)).padStart(2,'0');
+    const ss = String(r.duration_sec % 60).padStart(2,'0');
+    const medal = r.success && i < 3 ? medals[i] : (i + 1);
+    const codeLabel = !code && r.session_code ? `<small>${r.session_code}</small>` : '';
+    const date = new Date(r.created_at).toLocaleString('fr-BE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return `<div class="rnk-row ${r.success?'ok':''} ${isMe?'me':''}">
+      <div class="rnk-medal">${medal}</div>
+      <div class="rnk-name">${date}${codeLabel}<small>${r.mode} · ${r.val_count} vérif. · ${r.hints} aide${r.hints>1?'s':''}</small></div>
+      <div class="rnk-time">${mm}:${ss}</div>
+      <div class="rnk-ok ${r.success?'y':'n'}">${r.success?'✓':'✗'}</div>
+    </div>`;
+  }).join('');
 }
 
 /* ══════════════════════════════════════════
