@@ -90,6 +90,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
 
 /* maya card */
 .mc{background:#fff;border:3px solid #e5e7eb;border-radius:12px;padding:7px;cursor:grab;position:relative;transition:border-color .25s,box-shadow .15s;user-select:none;touch-action:none;flex-shrink:0}
+.op-expr{display:flex;align-items:center;gap:4px}
+.op-sym{font-size:1.4rem;font-weight:900;color:#1e293b;flex-shrink:0;line-height:1}
 .mc:hover:not(.locked){box-shadow:0 4px 14px rgba(0,0,0,.14);border-color:var(--pink)}
 .mc.placed{position:absolute;cursor:grab;z-index:10}
 .mc.ok{border-color:var(--green)!important;background:#f0fdf4}
@@ -276,7 +278,6 @@ function mayaSVG(n, h = 90) {
   let c = '';
   if (tw > 0) {
     c += mayaDigit(tw, cx, 5, 36);
-    c += `<line x1="${cx-26}" y1="44" x2="${cx+26}" y2="44" stroke="#94a3b8" stroke-width="1"/>`;
     c += mayaDigit(un, cx, 47, 36);
   } else {
     c += mayaDigit(un, cx, 10, 72);
@@ -320,6 +321,23 @@ function surprise() {
     const el = document.getElementById(`ci-${i}`);
     if (el) el.value = String(pool[i]);
   }
+}
+
+function parseOp(expr) {
+  // Detect binary operations like "4-7", "2*5", "-3+5"
+  // Distinguishes from plain negatives like "-7" (no match)
+  const m = String(expr).trim().match(/^(-?\d+)\s*([+\-*/])\s*(\d+)$/);
+  if (!m) return null;
+  return { a: +m[1], op: m[2], b: +m[3] };
+}
+
+function cardHTML(c) {
+  const op = parseOp(c.expr);
+  if (op) {
+    const sym = {'+': '+', '-': '−', '*': '×', '/': '÷'}[op.op];
+    return `<div class="op-expr">${mayaSVG(op.a)}<span class="op-sym">${sym}</span>${mayaSVG(op.b)}</div>`;
+  }
+  return mayaSVG(c.val);
 }
 
 function safeEval(s) {
@@ -437,7 +455,7 @@ function renderLine() {
   }
   s += '</svg>';
 
-  const old = lsc.querySelector('svg');
+  const old = lsc.querySelector(':scope > svg');
   if (old) old.remove();
   lsc.insertAdjacentHTML('afterbegin', s);
 
@@ -461,7 +479,7 @@ function renderPool() {
 function buildCard(c) {
   const el = document.createElement('div');
   el.className = 'mc'; el.dataset.id = c.id;
-  el.innerHTML = mayaSVG(c.val);
+  el.innerHTML = cardHTML(c);
   if (c.ok === true) el.classList.add('ok', 'locked');
   else if (c.ok === false) el.classList.add('ko');
 
@@ -485,15 +503,14 @@ function positionCard(id) {
   if (!el) { el = buildCard(c); lsc.appendChild(el); }
 
   const x = v2x(c.at);
-  // halfW = actual rendered half-width: SVG (80/62) + border (6) + padding (14) = 100/82 → /2 = 50/41
-  const halfW = c.val < 0 ? 50 : 41;
+
   const gap = 14;  // gap between card bottom and line (triangle fills it)
   const cardBot = lm.H - lm.lineY + gap;
 
   el.classList.add('placed');
   el.style.position = 'absolute';
   el.style.bottom = cardBot + 'px';
-  el.style.left   = (x - halfW) + 'px';
+  el.style.left   = (x - el.offsetWidth / 2) + 'px';
 }
 
 /* ── HINT ── */
