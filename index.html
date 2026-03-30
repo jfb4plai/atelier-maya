@@ -485,14 +485,15 @@ function positionCard(id) {
   if (!el) { el = buildCard(c); lsc.appendChild(el); }
 
   const x = v2x(c.at);
-  const cardW = c.val < 0 ? 80 : 62;  // match mayaSVG width
+  // halfW = actual rendered half-width: SVG (80/62) + border (6) + padding (14) = 100/82 → /2 = 50/41
+  const halfW = c.val < 0 ? 50 : 41;
   const gap = 14;  // gap between card bottom and line (triangle fills it)
   const cardBot = lm.H - lm.lineY + gap;
 
   el.classList.add('placed');
   el.style.position = 'absolute';
   el.style.bottom = cardBot + 'px';
-  el.style.left   = (x - cardW / 2) + 'px';
+  el.style.left   = (x - halfW) + 'px';
 }
 
 /* ── HINT ── */
