@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dans les chaussures de Maya — PLAI</title>
+<title>Atelier Maya — PLAI</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -142,7 +142,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
 
 <header class="hdr">
   <img class="hdr-logo" src="https://raw.githubusercontent.com/jfb4plai/Picto-lecture/main/public/nouveau_logo_plai_(1).jpg" alt="Logo PLAI">
-  <span class="hdr-title">Dans les <em>chaussures de Maya</em></span>
+  <span class="hdr-title"><em>Atelier</em> Maya</span>
 </header>
 
 <!-- ══════════ CONFIG ══════════ -->
@@ -658,7 +658,7 @@ function copyBilan() {
   const mm = String(Math.floor(st.sec / 60)).padStart(2, '0');
   const ss = String(st.sec % 60).padStart(2, '0');
   const mode = cfg.shared ? 'Partagé' : 'Solo';
-  const txt = `[PLAI — Dans les chaussures de Maya — ${mode}]\nTemps : ${mm}:${ss} | Vérifications : ${st.valCount} | Aides : ${st.hints}/${st.cards.length}`;
+  const txt = `[PLAI — Atelier Maya — ${mode}]\nTemps : ${mm}:${ss} | Vérifications : ${st.valCount} | Aides : ${st.hints}/${st.cards.length}`;
   navigator.clipboard.writeText(txt).then(() => {
     const b = document.querySelector('.btn-copy');
     b.textContent = '✅ Copié !';
