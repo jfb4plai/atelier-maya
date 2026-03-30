@@ -72,17 +72,15 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
 
 /* line section */
 .line-sec{background:#fff;border-radius:var(--r);padding:16px 16px 12px;box-shadow:var(--shadow);margin-bottom:20px}
-#lsc{position:relative;width:100%;overflow:visible;min-height:160px}
+#lsc{position:relative;width:100%;overflow:visible;min-height:280px}
 
-/* triangle pointer under placed cards */
-.mc.placed::after{
-  content:'';position:absolute;bottom:-14px;left:50%;
-  transform:translateX(-50%);width:0;height:0;
-  border-left:8px solid transparent;border-right:8px solid transparent;
-  border-top:12px solid #cbd5e1;
-}
-.mc.placed.ok::after{border-top-color:#16a34a}
-.mc.placed.ko::after{border-top-color:#dc2626}
+/* connector from placed card down to the graduation */
+.mc-conn{position:absolute;top:100%;left:50%;transform:translateX(-50%);width:2px;background:#cbd5e1;pointer-events:none;border-radius:0 0 1px 1px}
+.mc-conn::after{content:'';position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:12px solid #cbd5e1}
+.mc.ok .mc-conn{background:#16a34a}
+.mc.ok .mc-conn::after{border-top-color:#16a34a}
+.mc.ko .mc-conn{background:#dc2626}
+.mc.ko .mc-conn::after{border-top-color:#dc2626}
 
 /* card pool */
 .pool{background:#f3f4f6;border-radius:12px;border:2px dashed #e5e7eb;padding:16px;min-height:100px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:center}
@@ -269,18 +267,18 @@ function mayaDigit(n, cx, sy, sh) {
   return r.join('');
 }
 
-function mayaSVG(n, h = 90) {
+function mayaSVG(n, h = 72) {
   const neg = n < 0, abs = Math.abs(n);
-  // Negative cards wider to give room for the minus sign on the left
   const w = neg ? 80 : 62;
   const cx = neg ? 50 : 31;
   const tw = Math.floor(abs / 20), un = abs % 20;
+  const half = Math.floor(h / 2);
   let c = '';
   if (tw > 0) {
-    c += mayaDigit(tw, cx, 5, 36);
-    c += mayaDigit(un, cx, 47, 36);
+    c += mayaDigit(tw, cx, 2, half - 4);
+    c += mayaDigit(un, cx, half + 4, half - 4);
   } else {
-    c += mayaDigit(un, cx, 10, 72);
+    c += mayaDigit(un, cx, 4, h - 8);
   }
   if (neg) {
     // Minus left side, vertically centred with the Maya numeral
@@ -432,7 +430,7 @@ function tick() {
 function renderLine() {
   const lsc = document.getElementById('lsc');
   const W = lsc.offsetWidth || 800;
-  const H = 160, mL = 58, mR = 58, lineY = 108;
+  const H = 280, mL = 58, mR = 58, lineY = 215;
   const { mn, mx } = lm.range;
   const span = mx - mn;
   const upx = (W - mL - mR) / span;
@@ -502,15 +500,39 @@ function positionCard(id) {
   let el = lsc.querySelector(`.mc[data-id="${id}"]`);
   if (!el) { el = buildCard(c); lsc.appendChild(el); }
 
-  const x = v2x(c.at);
-
-  const gap = 14;  // gap between card bottom and line (triangle fills it)
-  const cardBot = lm.H - lm.lineY + gap;
-
   el.classList.add('placed');
   el.style.position = 'absolute';
+
+  const x = v2x(c.at);
+  const cardW = el.offsetWidth;
+  const cardH = el.offsetHeight;
+  const gap = 14;
+  const baseBot = lm.H - lm.lineY + gap;
+  const laneStep = cardH + 10;
+  const myL = x - cardW / 2, myR = myL + cardW;
+
+  // Find the lowest lane with no horizontal overlap
+  let lane = 0;
+  for (; lane < 6; lane++) {
+    const bot = baseBot + lane * laneStep;
+    const conflict = [...lsc.querySelectorAll(`.mc.placed[data-id]:not([data-id="${id}"])`)].some(o => {
+      if (Math.abs(parseFloat(o.style.bottom) - bot) > laneStep / 2) return false;
+      const oL = parseFloat(o.style.left), oR = oL + o.offsetWidth;
+      return myL < oR + 4 && myR > oL - 4;
+    });
+    if (!conflict) break;
+  }
+
+  const cardBot = baseBot + lane * laneStep;
   el.style.bottom = cardBot + 'px';
-  el.style.left   = (x - el.offsetWidth / 2) + 'px';
+  el.style.left   = (x - cardW / 2) + 'px';
+
+  // Connector line from card bottom to graduation mark
+  el.querySelector('.mc-conn')?.remove();
+  const conn = document.createElement('div');
+  conn.className = 'mc-conn';
+  conn.style.height = (cardBot - (lm.H - lm.lineY)) + 'px';
+  el.appendChild(conn);
 }
 
 /* ── HINT ── */
