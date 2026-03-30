@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Atelier Maya — PLAI</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -128,6 +129,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
 .riss p+p{margin-top:8px}
 .btn-restart{width:100%;padding:14px;background:var(--pink);color:#fff;border:none;border-radius:12px;font-size:.94rem;font-weight:700;cursor:pointer;margin-top:18px;transition:background .15s}
 .btn-restart:hover{background:var(--pink-d)}
+.sb-st{text-align:center;font-size:.8rem;color:var(--gray);min-height:1.4em;margin:10px 0 2px}
+.fld-code input{width:100%;border:2px solid #e5e7eb;border-radius:8px;padding:8px 12px;font-size:.94rem;color:var(--dark);transition:border-color .15s}
+.fld-code input:focus{outline:none;border-color:var(--pink)}
 .btn-copy{width:100%;padding:11px;background:transparent;color:var(--gray);border:2px solid #e5e7eb;border-radius:12px;font-size:.84rem;cursor:pointer;margin-top:8px;transition:all .15s}
 .btn-copy:hover{border-color:var(--slate);color:var(--slate)}
 
@@ -188,6 +192,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
         </div>
       </div>
 
+      <div class="fld fld-code">
+        <label class="lbl">Code session <small>(optionnel — regroupe les résultats d'une même formation)</small></label>
+        <input type="text" id="o-code" placeholder="ex. PLAI-mars-2026" autocomplete="off">
+      </div>
+
       <button class="btn-launch" onclick="launch()">Lancer l'activité →</button>
     </div>
   </div>
@@ -229,6 +238,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
       </div>
       <div class="stats" id="bil-stats"></div>
       <div class="riss" id="bil-riss"></div>
+      <div class="sb-st" id="sb-status"></div>
       <button class="btn-copy" onclick="copyBilan()">📋 Copier le résumé</button>
       <button class="btn-restart" onclick="goConfig()">↺ Nouvelle activité</button>
     </div>
@@ -362,7 +372,8 @@ function launch() {
     timer: document.getElementById('o-timer').checked,
     hint:  document.getElementById('o-hint').checked,
     validate: document.getElementById('o-val').checked,
-    shared: document.getElementById('o-shared').checked
+    shared: document.getElementById('o-shared').checked,
+    sessionCode: document.getElementById('o-code').value.trim()
   };
   startActivity();
 }
@@ -676,6 +687,7 @@ function finishActivity() {
 ══════════════════════════════════════════ */
 function goBilan() {
   showScreen('s-bil');
+  saveSession();
   const mm = String(Math.floor(st.sec / 60)).padStart(2, '0');
   const ss = String(st.sec % 60).padStart(2, '0');
 
@@ -703,6 +715,37 @@ function copyBilan() {
     b.textContent = '✅ Copié !';
     setTimeout(() => b.textContent = '📋 Copier le résumé', 2000);
   });
+}
+
+/* ══════════════════════════════════════════
+   SUPABASE
+══════════════════════════════════════════ */
+const _sb = (typeof supabase !== 'undefined')
+  ? supabase.createClient(
+      'https://otiorljbujqzruulmqrs.supabase.co',
+      'sb_publishable_txhpqAZpx_Yth8zFQ3J0QQ_f9QVU0nE'
+    )
+  : null;
+
+async function saveSession() {
+  const el = document.getElementById('sb-status');
+  if (!_sb) { el.textContent = ''; return; }
+  el.textContent = '⏳ Sauvegarde…';
+  try {
+    const { error } = await _sb.from('sessions_atelier_maya').insert([{
+      session_code: cfg.sessionCode || '',
+      duration_sec: st.sec,
+      val_count:    st.valCount,
+      hints:        st.hints,
+      card_count:   st.cards.length,
+      mode:         cfg.shared ? 'partagé' : 'solo',
+      cards:        st.cards.map(c => ({ expr: c.expr, val: c.val })),
+      success:      st.cards.every(c => c.ok === true)
+    }]);
+    el.textContent = error ? '⚠️ Sauvegarde échouée' : '✅ Session sauvegardée';
+  } catch (_) {
+    el.textContent = '⚠️ Sauvegarde indisponible';
+  }
 }
 
 /* ══════════════════════════════════════════
