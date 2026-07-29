@@ -176,8 +176,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
 <section id="s-cfg" class="screen on">
   <div class="cfg-wrap">
     <div class="cfg-card">
-      <div class="cfg-h1">⚙️ Configuration — Animateur</div>
-      <div class="cfg-sub">Paramétrez l'activité avant de la projeter pour les participants</div>
+      <div class="cfg-h1" id="cfg-h1">⚙️ Configuration — Animateur</div>
+      <div class="cfg-sub" id="cfg-sub">Paramétrez l'activité avant de la projeter pour les participants</div>
 
       <div class="fld">
         <label class="lbl">Nombre de cartes <small>(2 – 8)</small></label>
@@ -216,7 +216,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
       </div>
 
       <div class="fld fld-code">
-        <label class="lbl">Code session <small>(optionnel — regroupe les résultats d'une même formation)</small></label>
+        <label class="lbl">Code session <small id="code-hint">(optionnel — regroupe les résultats d'une même formation)</small></label>
         <input type="text" id="o-code" placeholder="ex. PLAI-mars-2026" autocomplete="off">
       </div>
 
@@ -282,6 +282,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
 </section>
 
 <script>
+const PUBLIC_PARENT = new URLSearchParams(location.search).get('public') === 'parent';
+if (PUBLIC_PARENT) {
+  document.getElementById('cfg-h1').textContent = '⚙️ Configuration';
+  document.getElementById('cfg-sub').textContent = "Paramétrez l'activité avant de l'essayer";
+  document.getElementById('code-hint').textContent = '(optionnel — regroupe plusieurs essais)';
+}
 /* ══════════════════════════════════════════
    MAYA RENDERER
 ══════════════════════════════════════════ */
@@ -735,7 +741,7 @@ function goBilan() {
 
   document.getElementById('bil-riss').innerHTML = `
     <strong>🔬 Ancrage scientifique — Corpus RISS</strong>
-    <p>L'anxiété mathématique « envahit la mémoire de travail et laisse peu de place à l'activité cognitive réelle » — un cercle vicieux que le chronomètre visible permet de faire vivre aux enseignants. <cite>Favodon &amp; Wasielewski (2025). <em>Le jeu mathématique comme outil évaluatif pour réduire l'anxiété des élèves.</em></cite> [RISS : dumas-05241399]</p>
+    <p>L'anxiété mathématique « envahit la mémoire de travail et laisse peu de place à l'activité cognitive réelle » — un cercle vicieux que le chronomètre visible permet de faire vivre ${PUBLIC_PARENT ? "à qui l'essaie" : 'aux enseignants'}. <cite>Favodon &amp; Wasielewski (2025). <em>Le jeu mathématique comme outil évaluatif pour réduire l'anxiété des élèves.</em></cite> [RISS : dumas-05241399]</p>
     <p>La détérioration des processus cognitifs par l'anxiété mathématique — notamment de la mémoire de travail — majore les difficultés, particulièrement chez les élèves à besoins spécifiques. <cite>Ginésy, M. (2023). <em>Anxiété mathématique : apport de la sophrologie chez l'adolescent présentant un trouble des apprentissages mathématiques.</em></cite> [RISS : dumas-04161650]</p>
     <p>L'entraînement au placement sur droite numérique améliore le sens du nombre chez les élèves présentant des troubles de la cognition mathématique. <cite>Sayegh, M. (2021). <em>Intérêt d'un entraînement autour de la ligne numérique avec apport de stratégies explicites.</em></cite> [RISS : dumas-03285680]</p>
   `;
