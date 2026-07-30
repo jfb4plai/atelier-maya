@@ -865,6 +865,17 @@ window.addEventListener('load', () => {
   if (PUBLIC_PARENT) {
     const explanation = document.getElementById('parent-explanation');
     if (explanation) explanation.style.display = 'block';
+
+    // Valeurs choisies (pas surprise()) : garantit qu'une carte à une seule
+    // barre (5-9) est présente ET que "10" apparaît comme repère visible sur
+    // la droite graduée — sinon le piège de confusion barre=10 (au lieu de 5)
+    // n'apparaît pas si le tirage aléatoire ne s'en approche pas.
+    const valeursParent = [5, 9, 12, -6];
+    valeursParent.forEach((v, i) => {
+      const el = document.getElementById(`ci-${i}`);
+      if (el) el.value = String(v);
+    });
+
     launch();
   }
 });
