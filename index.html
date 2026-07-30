@@ -228,6 +228,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
 <!-- ══════════ ACTIVITÉ ══════════ -->
 <section id="s-act" class="screen">
   <div class="act-wrap">
+    <div id="parent-explanation" style="display:none; background:#fff9e6; border:1px solid #f2e29b; border-radius:8px; padding:12px 16px; margin-bottom:12px; font-size:15px; line-height:1.5;">
+      👁️ Ces symboles mayas et ce chronomètre sont volontairement déstabilisants : c'est une simulation de ce que peut ressentir un enfant dyscalculique face à un exercice de maths chronométré. Essayez de placer les cartes, puis notez ce que vous avez ressenti.
+    </div>
     <div class="act-top">
       <div class="act-title">🏺 Placez chaque symbole Maya sur la droite graduée</div>
       <div id="timer" class="timer">⏱ 00:00</div>
@@ -856,7 +859,15 @@ window.addEventListener('resize', () => {
 /* ══════════════════════════════════════════
    INIT
 ══════════════════════════════════════════ */
-window.addEventListener('load', () => { syncNb(); surprise(); });
+window.addEventListener('load', () => {
+  syncNb();
+  surprise();
+  if (PUBLIC_PARENT) {
+    const explanation = document.getElementById('parent-explanation');
+    if (explanation) explanation.style.display = 'block';
+    launch();
+  }
+});
 </script>
 </body>
 </html>
