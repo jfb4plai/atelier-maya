@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Atelier Maya — PLAI</title>
+<title>Atelier dyscalculie — PLAI</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -103,6 +103,23 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
 .ho{position:absolute;inset:0;background:rgba(233,30,140,.92);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.7rem;font-weight:900;z-index:15;animation:fi .15s}
 @keyframes fi{from{opacity:0}to{opacity:1}}
 
+/* sign help ("?" on cards with a + / - sign) */
+.sgn{position:absolute;top:-12px;left:-12px;width:28px;height:28px;background:var(--slate);color:#fff;border:2px solid #fff;border-radius:50%;font-size:.85rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:20;padding:0;touch-action:manipulation}
+.sgn:hover{background:var(--dark)}
+.mc.locked .sgn{pointer-events:auto}
+.sgn-pop{position:fixed;z-index:10000;max-width:280px;background:#fff;border:2px solid var(--slate);border-radius:10px;padding:12px 38px 12px 14px;font-size:1rem;line-height:1.5;color:var(--dark);box-shadow:0 6px 24px rgba(0,0,0,.2)}
+
+/* tools (top left) + closable panels above the pool */
+.tools{display:flex;gap:8px}
+.tool-btn{width:44px;height:44px;border-radius:50%;border:2px solid #e5e7eb;background:#fff;font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:border-color .15s,background .15s}
+.tool-btn:hover,.tool-btn[aria-expanded="true"]{border-color:var(--pink);background:#fdf2f8}
+.panel{position:relative;background:#fff9e6;border:1px solid #f2e29b;border-radius:10px;padding:14px 52px 14px 16px;margin-bottom:14px;font-size:1rem;line-height:1.55;color:var(--dark)}
+.panel p+p{margin-top:8px}
+.panel[hidden]{display:none}
+.x-btn{position:absolute;top:6px;right:6px;width:44px;height:44px;border:none;background:transparent;font-size:1.5rem;line-height:1;color:var(--gray);cursor:pointer;border-radius:8px}
+.x-btn:hover{color:var(--pink-d);background:rgba(0,0,0,.05)}
+.sgn-pop .x-btn{top:0;right:0;width:36px;height:36px;font-size:1.3rem}
+
 /* drop indicator */
 #di{position:absolute;width:3px;background:var(--pink);border-radius:2px;pointer-events:none;transform:translateX(-50%);display:none;z-index:50;box-shadow:0 0 6px var(--pink)}
 
@@ -169,7 +186,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
 
 <header class="hdr">
   <img class="hdr-logo" src="https://raw.githubusercontent.com/jfb4plai/Picto-lecture/main/public/nouveau_logo_plai_(1).jpg" alt="Logo PLAI">
-  <span class="hdr-title"><em>Atelier</em> Maya</span>
+  <span class="hdr-title"><em>Atelier</em> dyscalculie</span>
 </header>
 
 <!-- ══════════ CONFIG ══════════ -->
@@ -182,8 +199,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
       <div class="fld">
         <label class="lbl">Nombre de cartes <small>(2 – 8)</small></label>
         <div class="sld-row">
-          <input type="range" id="nb" min="2" max="8" value="4" oninput="syncNb()">
-          <div class="sld-val" id="nb-v">4</div>
+          <input type="range" id="nb" min="2" max="8" value="5" oninput="syncNb()">
+          <div class="sld-val" id="nb-v">5</div>
         </div>
       </div>
 
@@ -232,6 +249,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
       👁️ Ces symboles mayas et ce chronomètre sont volontairement déstabilisants : c'est une simulation de ce que peut ressentir un enfant dyscalculique face à un exercice de maths chronométré. Essayez de placer les cartes, puis notez ce que vous avez ressenti.
     </div>
     <div class="act-top">
+      <div class="tools">
+        <button class="tool-btn" id="btn-consigne" onclick="togglePanel('consigne')" aria-label="Afficher la consigne" aria-expanded="true" title="Consigne">💡</button>
+        <button class="tool-btn" id="btn-indice" onclick="togglePanel('indice')" aria-label="Afficher un indice" aria-expanded="false" title="Indice">🪄</button>
+      </div>
       <div class="act-title">🏺 Placez chaque symbole Maya sur la droite graduée</div>
       <div id="timer" class="timer">⏱ 00:00</div>
       <button class="btn-back" onclick="goConfig()">← Config</button>
@@ -241,6 +262,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--light);min-hei
       <div id="lsc">
         <div id="di"></div>
       </div>
+    </div>
+
+    <div class="panel" id="panel-consigne" role="region" aria-label="Consigne">
+      <button class="x-btn" onclick="togglePanel('consigne', false)" aria-label="Fermer la consigne">×</button>
+      <p>En un minimum de temps, placez les étiquettes sur la droite graduée.</p>
+      <p>Quand vous avez terminé, cliquez sur le symbole de validation et corrigez si nécessaire.</p>
+    </div>
+    <div class="panel" id="panel-indice" role="region" aria-label="Indice" hidden>
+      <button class="x-btn" onclick="togglePanel('indice', false)" aria-label="Fermer l'indice">×</button>
+      <p>Un point représente une unité, mais laquelle ?</p>
+      <p>Notre numérotation arabe est en base 10, toutes les autres numérotations aussi ?</p>
+      <p>Le saviez-vous ? Le système vicésimal (ou vigésimal) est un système de numération très souvent couplé au système quinaire...</p>
     </div>
 
     <div class="pool" id="pool">
@@ -363,6 +396,15 @@ function buildInputs(n) {
   }
 }
 
+const DEFAULT_VALS = ['21', '-25', '6', '11', '6-13'];
+
+function setDefaults() {
+  DEFAULT_VALS.forEach((v, i) => {
+    const el = document.getElementById(`ci-${i}`);
+    if (el) el.value = v;
+  });
+}
+
 function surprise() {
   const n = +document.getElementById('nb').value;
   const pool = [];
@@ -443,9 +485,20 @@ function initState() {
 
 function calcRange() {
   const nums = cfg.vals.map(v => v.val);
-  const mn = Math.min(...nums), mx = Math.max(...nums);
-  const pad = Math.max(3, Math.ceil((mx - mn) * .2) + 1);
-  return { mn: Math.floor(mn - pad), mx: Math.ceil(mx + pad) };
+  // Une carte à barre(s) peut être mal lue si l'apprenant confond
+  // « barre = 10 » (au lieu de 5, la convention maya réelle) : la droite
+  // doit couvrir cette valeur mal interprétée, sinon le piège de confusion
+  // est invisible (impossible à tester en pratique).
+  const misreads = nums.flatMap(v => {
+    const un = Math.abs(v) % 20;
+    const bars = Math.floor(un / 5), dots = un % 5;
+    return bars > 0 ? [Math.sign(v) * (bars * 10 + dots)] : [];
+  });
+  const all = [...nums, ...misreads];
+  // Droite symétrique (0 au milieu) : ±30 par défaut, élargie si une valeur dépasse.
+  const need = Math.max(...all.map(Math.abs));
+  const M = need <= 30 ? 30 : need + 3;
+  return { mn: -M, mx: M };
 }
 
 /* ══════════════════════════════════════════
@@ -467,6 +520,10 @@ function startActivity() {
     ival = setInterval(tick, 1000);
   }
 
+  closeSignPop();
+  togglePanel('consigne', true);
+  togglePanel('indice', false);
+
   document.getElementById('btn-val').style.display = cfg.validate ? 'inline-block' : 'none';
   document.getElementById('btn-fin').style.display = 'none';
 
@@ -479,7 +536,8 @@ function tick() {
   const mm = String(Math.floor(st.sec / 60)).padStart(2, '0');
   const ss = String(st.sec % 60).padStart(2, '0');
   tel.textContent = `⏱ ${mm}:${ss}`;
-  tel.className = st.sec < 45 ? 'timer' : st.sec < 90 ? 'timer warn' : 'timer danger';
+  // vert < 3'00" ; orange 3'00" à 3'12" ; rouge dès 3'13"
+  tel.className = st.sec < 180 ? 'timer' : st.sec < 193 ? 'timer warn' : 'timer danger';
 }
 
 /* ── NUMBER LINE ── */
@@ -543,8 +601,48 @@ function buildCard(c) {
     hb.onclick = e => { e.stopPropagation(); doHint(c.id, el); };
     el.appendChild(hb);
   }
+  if (hasSign(c)) {
+    const sb = document.createElement('button');
+    sb.className = 'sgn'; sb.textContent = '?';
+    sb.setAttribute('aria-label', 'Signification du signe');
+    // pointerdown stoppé : sinon le clic déclencherait un glisser-déposer
+    sb.addEventListener('pointerdown', e => e.stopPropagation());
+    sb.addEventListener('click', e => { e.stopPropagation(); openSignPop(sb); });
+    el.appendChild(sb);
+  }
   if (c.ok !== true) setupDrag(el, c.id);
   return el;
+}
+
+/* ── SIGN HELP ── */
+function hasSign(c) { return !!parseOp(c.expr) || c.val < 0; }
+
+function closeSignPop() { document.getElementById('sgn-pop')?.remove(); }
+
+function openSignPop(anchor) {
+  const open = document.getElementById('sgn-pop');
+  closeSignPop();
+  if (open && open._anchor === anchor) return;
+  const pop = document.createElement('div');
+  pop.id = 'sgn-pop'; pop.className = 'sgn-pop'; pop.setAttribute('role', 'dialog');
+  pop._anchor = anchor;
+  pop.innerHTML = `<button class="x-btn" aria-label="Fermer">×</button>Les signes opératoires ont, pour votre facilité, la même signification que dans notre système`;
+  pop.querySelector('.x-btn').onclick = closeSignPop;
+  document.body.appendChild(pop);
+  const r = anchor.getBoundingClientRect();
+  const left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, r.left));
+  const below = r.bottom + 8 + pop.offsetHeight < window.innerHeight;
+  pop.style.left = left + 'px';
+  pop.style.top = (below ? r.bottom + 8 : Math.max(8, r.top - pop.offsetHeight - 8)) + 'px';
+}
+
+/* ── PANELS (consigne / indice) ── */
+function togglePanel(name, force) {
+  const p = document.getElementById('panel-' + name);
+  const show = force === undefined ? p.hidden : force;
+  p.hidden = !show;
+  document.getElementById(name === 'consigne' ? 'btn-consigne' : 'btn-indice')
+    .setAttribute('aria-expanded', String(show));
 }
 
 /* ── POSITION ON LINE ── */
@@ -754,7 +852,7 @@ function copyBilan() {
   const mm = String(Math.floor(st.sec / 60)).padStart(2, '0');
   const ss = String(st.sec % 60).padStart(2, '0');
   const mode = cfg.shared ? 'Partagé' : 'Solo';
-  const txt = `[PLAI — Atelier Maya — ${mode}]\nTemps : ${mm}:${ss} | Vérifications : ${st.valCount} | Aides : ${st.hints}/${st.cards.length}`;
+  const txt = `[PLAI — Atelier dyscalculie — ${mode}]\nTemps : ${mm}:${ss} | Vérifications : ${st.valCount} | Aides : ${st.hints}/${st.cards.length}`;
   navigator.clipboard.writeText(txt).then(() => {
     const b = document.querySelector('.btn-copy');
     b.textContent = '✅ Copié !';
@@ -861,8 +959,11 @@ window.addEventListener('resize', () => {
 ══════════════════════════════════════════ */
 window.addEventListener('load', () => {
   syncNb();
-  surprise();
+  setDefaults();
   if (PUBLIC_PARENT) {
+    // 4 cartes en mode parents (jeu de valeurs propre, ci-dessous)
+    document.getElementById('nb').value = 4;
+    syncNb();
     const explanation = document.getElementById('parent-explanation');
     if (explanation) explanation.style.display = 'block';
 
